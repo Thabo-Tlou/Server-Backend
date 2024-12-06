@@ -1,68 +1,59 @@
-// Server
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import connectDB from './db.js';
+import connectDB from './db.js'; // Assuming you have a db.js file for MongoDB connection
 
 const app = express();
 
-
-app.use(cors({ 
-  origin: 'https://awy-hr-management-system.netlify.app', // Allow requests from your Netlify domain
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Restrict methods if needed
-  allowedHeaders: ['Content-Type', 'Authorization'] // Add allowed headers
+// CORS configuration - allows requests from both Netlify and localhost for development
+app.use(cors({
+  origin: ['https://awy-hr-management-system.netlify.app', 'http://localhost:5173'], 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(cors());
-app.use(express.json());
 
+app.use(express.json()); // Middleware to parse JSON requests
 
+// Connect to MongoDB
 connectDB();
 
-
-const employeeSchema = new mongoose.Schema(
-  {
-    staffNumber: { type: String, required: true, unique: true },
-    fullName: { type: String, required: true },
-    identityNumber: { type: String, required: true },
-    qualifications: { type: String, required: true },
-    position: { type: String, required: true },
-    salary: { type: Number, required: true },
-    contractStatus: { type: String, enum: ['active', 'terminated'], default: 'active' },
-    points: { type: Number, default: 0 },
-    pointsHistory: [
-      {
-        points: { type: Number, required: true },
-        reason: { type: String, required: true },
-        date: { type: Date, default: Date.now },
-      },
-    ],
-    academicTraining: { type: [String], default: [] },
-    professionalTraining: { type: [String], default: [] },
-  },
-  { timestamps: true }
-);
-
-const Employee = mongoose.models.Employee || mongoose.model('Employee', employeeSchema);
-
-
-const vehicleSchema = new mongoose.Schema(
-  {
-    vin: { type: String, required: true, unique: true }, // Vehicle Identification Number
-    model: { type: String, required: true },
-    mileage: { type: Number, required: true },
-    driver: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }, // Reference to an Employee (driver)
-    status: {
-      type: String,
-      enum: ['available', 'in use', 'sold', 'on service'],
-      default: 'available',
+// Employee Schema
+const employeeSchema = new mongoose.Schema({
+  staffNumber: { type: String, required: true, unique: true },
+  fullName: { type: String, required: true },
+  identityNumber: { type: String, required: true },
+  qualifications: { type: String, required: true },
+  position: { type: String, required: true },
+  salary: { type: Number, required: true },
+  contractStatus: { type: String, enum: ['active', 'terminated'], default: 'active' },
+  points: { type: Number, default: 0 },
+  pointsHistory: [
+    {
+      points: { type: Number, required: true },
+      reason: { type: String, required: true },
+      date: { type: Date, default: Date.now },
     },
-  },
-  { timestamps: true }
-);
+  ],
+  academicTraining: { type: [String], default: [] },
+  professionalTraining: { type: [String], default: [] },
+}, { timestamps: true });
 
+// Vehicle Schema
+const vehicleSchema = new mongoose.Schema({
+  vin: { type: String, required: true, unique: true },
+  model: { type: String, required: true },
+  mileage: { type: Number, required: true },
+  driver: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }, // Reference to Employee
+  status: { type: String, enum: ['available', 'in use', 'sold', 'on service'], default: 'available' },
+}, { timestamps: true });
+
+// Create or use existing models
+const Employee = mongoose.models.Employee || mongoose.model('Employee', employeeSchema);
 const Vehicle = mongoose.models.Vehicle || mongoose.model('Vehicle', vehicleSchema);
 
+// Routes
 
+// Get all employees
 app.get('/employees', async (req, res) => {
   try {
     const employees = await Employee.find();
@@ -73,6 +64,7 @@ app.get('/employees', async (req, res) => {
   }
 });
 
+// Create a new employee
 app.post('/employees', async (req, res) => {
   try {
     const newEmployee = new Employee(req.body);
@@ -87,6 +79,7 @@ app.post('/employees', async (req, res) => {
   }
 });
 
+// Update an existing employee
 app.put('/employees/:id', async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -104,6 +97,7 @@ app.put('/employees/:id', async (req, res) => {
   }
 });
 
+// Delete an employee
 app.delete('/employees/:id', async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -121,7 +115,7 @@ app.delete('/employees/:id', async (req, res) => {
   }
 });
 
-
+// Add points to an employee
 app.patch('/employees/:id/add-points', async (req, res) => {
   const { id } = req.params;
   const { points, reason } = req.body;
@@ -154,7 +148,7 @@ app.patch('/employees/:id/add-points', async (req, res) => {
   }
 });
 
-
+// Get all vehicles
 app.get('/vehicles', async (req, res) => {
   try {
     const vehicles = await Vehicle.find().populate('driver', 'fullName');
@@ -165,6 +159,7 @@ app.get('/vehicles', async (req, res) => {
   }
 });
 
+// Create a new vehicle
 app.post('/vehicles', async (req, res) => {
   try {
     const newVehicle = new Vehicle(req.body);
@@ -189,3 +184,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
