@@ -1,5 +1,3 @@
-// server.js (backend)
-
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -9,7 +7,7 @@ const app = express();
 
 // CORS Configuration
 app.use(cors({
-  origin: ['https://awy-hr-management-system.netlify.app', 'http://localhost:5173'], // Add both production and local URL
+  origin: ['https://awy-hr-management-system.netlify.app', 'http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -113,6 +111,32 @@ app.delete('/employees/:id', async (req, res) => {
     res.status(200).json({ message: 'Employee deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting employee', error: error.message });
+  }
+});
+
+// Add Points to Employee
+app.patch('/employees/:id/add-points', async (req, res) => {
+  const { id } = req.params;
+  const { points, reason } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid employee ID' });
+  }
+
+  try {
+    const employee = await Employee.findById(id);
+
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    employee.points += points; // Add points to current total
+    employee.pointsHistory.push({ points, reason }); // Add points to history
+
+    const updatedEmployee = await employee.save();
+    res.status(200).json(updatedEmployee);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding points', error: error.message });
   }
 });
 
